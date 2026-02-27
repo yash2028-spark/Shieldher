@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | ShieldHer</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass-card {
+            background: rgba(17, 17, 17, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1.5rem;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .action-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(244, 63, 94, 0.5);
+            box-shadow: 0 10px 30px -10px rgba(244, 63, 94, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-[#050505] text-white min-h-screen pb-20">
+    <nav class="border-b border-zinc-900 p-4 sticky top-0 bg-black/80 backdrop-blur-md z-50">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold gradient-text">ShieldHer</h1>
+            <div class="flex gap-6 items-center">
+                <a href="/dashboard.html" class="nav-link active">Dashboard</a>
+                <a href="/home.html" class="nav-link">Report</a>
+                <a href="/vault.html" class="nav-link">Vault</a>
+                <button id="btnLogout" class="text-xs text-zinc-500 hover:text-white uppercase tracking-widest font-bold">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto p-4 mt-10">
+        <!-- Profile & Stats Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+            <div class="lg:col-span-2 glass-card p-8 flex flex-col md:flex-row items-center gap-8">
+                <div class="relative">
+                    <img id="userAvatar" src="https://picsum.photos/seed/user/200" alt="Profile" class="w-32 h-32 rounded-full border-4 border-rose-500/20 object-cover">
+                    <div class="absolute bottom-0 right-0 w-8 h-8 bg-emerald-500 border-4 border-[#111] rounded-full"></div>
+                </div>
+                <div class="text-center md:text-left">
+                    <h2 id="userName" class="text-3xl font-bold mb-1 italic serif">Welcome back</h2>
+                    <p id="userEmail" class="text-zinc-500 mb-4 font-mono text-sm">loading...</p>
+                    <div class="flex flex-wrap gap-3 justify-center md:justify-start">
+                        <span class="px-3 py-1 bg-rose-500/10 text-rose-500 rounded-full text-xs font-bold uppercase tracking-wider border border-rose-500/20">Verified Account</span>
+                        <span class="px-3 py-1 bg-zinc-800 text-zinc-400 rounded-full text-xs font-bold uppercase tracking-wider border border-zinc-700">Zero-Knowledge Active</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card p-8 flex flex-col justify-center items-center text-center">
+                <p class="text-zinc-500 text-xs uppercase tracking-widest font-bold mb-2">Total Incidents</p>
+                <h3 id="totalIncidents" class="text-6xl font-black gradient-text">0</h3>
+                <p class="text-zinc-600 text-[10px] mt-4 uppercase tracking-widest">Secured in your private vault</p>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-[0.2em] mb-6">Quick Actions</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <a href="/home.html" class="action-card glass-card p-6 transition-all duration-300 group">
+                <div class="w-12 h-12 bg-rose-500/10 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-rose-500/20 transition-colors">
+                    <span class="text-2xl">📝</span>
+                </div>
+                <h4 class="text-lg font-bold mb-1">Report Incident</h4>
+                <p class="text-zinc-500 text-sm">Document new evidence with client-side encryption.</p>
+            </a>
+            <a href="/vault.html" class="action-card glass-card p-6 transition-all duration-300 group">
+                <div class="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-500/20 transition-colors">
+                    <span class="text-2xl">🔒</span>
+                </div>
+                <h4 class="text-lg font-bold mb-1">Open Vault</h4>
+                <p class="text-zinc-500 text-sm">Access your secure storage and decrypt evidence.</p>
+            </a>
+            <a href="/vault.html" class="action-card glass-card p-6 transition-all duration-300 group">
+                <div class="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-500/20 transition-colors">
+                    <span class="text-2xl">📊</span>
+                </div>
+                <h4 class="text-lg font-bold mb-1">View History</h4>
+                <p class="text-zinc-500 text-sm">Review timeline of all reported incidents and proofs.</p>
+            </a>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="grid grid-cols-1 gap-8">
+            <div class="glass-card p-8">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-xl font-bold">Recent Incidents</h3>
+                    <a href="/vault.html" class="text-xs text-rose-500 font-bold uppercase tracking-widest hover:underline">View All</a>
+                </div>
+                <div id="recentIncidents" class="space-y-4">
+                    <div class="animate-pulse flex space-x-4">
+                        <div class="flex-1 space-y-4 py-1">
+                            <div class="h-4 bg-zinc-800 rounded w-3/4"></div>
+                            <div class="space-y-2">
+                                <div class="h-4 bg-zinc-800 rounded"></div>
+                                <div class="h-4 bg-zinc-800 rounded w-5/6"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="/js/dashboard.js"></script>
+</body>
+</html>
