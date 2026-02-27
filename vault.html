@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Vault | ShieldHer</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="pb-20">
+    <nav class="border-b border-zinc-900 p-4 sticky top-0 bg-black/80 backdrop-blur-md z-50">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-rose-600">ShieldHer</h1>
+            <div class="flex gap-6 items-center">
+                <a href="/dashboard.html" class="nav-link">Dashboard</a>
+                <a href="/home.html" class="nav-link">Report</a>
+                <a href="/vault.html" class="nav-link active">Vault</a>
+                <button id="btnLogout" class="text-xs text-zinc-500 hover:text-white uppercase tracking-widest font-bold">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto p-4 mt-10">
+        <div class="flex justify-between items-end mb-10">
+            <div>
+                <h2 class="text-4xl font-bold mb-2">Secure Vault</h2>
+                <p class="text-zinc-500">Your encrypted evidence history</p>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] text-zinc-600 uppercase tracking-widest font-bold mb-1">Vault Status</p>
+                <span class="text-emerald-500 text-xs font-bold flex items-center gap-1">
+                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                    End-to-End Encrypted
+                </span>
+            </div>
+        </div>
+
+        <div id="loading" class="text-center py-20">
+            <div class="inline-block w-8 h-8 border-4 border-rose-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p class="text-zinc-500">Decrypting vault data...</p>
+        </div>
+
+        <div id="empty" class="hidden text-center py-20 glass-card">
+            <p class="text-zinc-500 mb-6">No incidents found in your vault.</p>
+            <a href="/home.html" class="btn-primary">Report New Incident</a>
+        </div>
+
+        <div id="incidentList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Incidents will be injected here -->
+        </div>
+    </main>
+
+    <!-- Summary Modal -->
+    <div id="summaryModal" class="modal-overlay">
+        <div class="modal-content glass-card p-8 w-full max-w-lg">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h3 class="text-2xl font-bold text-rose-500" id="summaryTitle">Incident Summary</h3>
+                    <p id="fileCountBadge" class="text-[10px] text-zinc-500 uppercase tracking-widest mt-1 font-bold"></p>
+                </div>
+                <button id="btnCloseSummary" class="text-zinc-500 hover:text-white">✕</button>
+            </div>
+            
+            <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 mb-8">
+                <p id="summaryText" class="text-zinc-300 leading-relaxed italic text-sm"></p>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button id="btnConfirmDownload" class="btn-primary w-full py-3">Download Evidence & Report</button>
+                <button id="btnCancelSummary" class="btn-secondary w-full py-3">Cancel</button>
+            </div>
+            <p class="text-[10px] text-zinc-600 mt-6 text-center">This summary is generated dynamically from your encrypted data. No plain-text data is stored on our servers.</p>
+        </div>
+    </div>
+
+    <!-- Master Passphrase Modal -->
+    <div id="vaultModal" class="modal-overlay">
+        <div class="modal-content glass-card p-8 w-full max-w-sm">
+            <h3 class="text-xl font-bold mb-2">Unlock Vault</h3>
+            <p class="text-zinc-500 text-xs mb-6">Enter your master passphrase to decrypt your vault.</p>
+            <input type="password" id="passphraseUnlock" class="input-field mb-4" placeholder="Master Passphrase">
+            <button id="btnUnlock" class="btn-primary w-full">Unlock</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth, checkAuth } from './js/auth.js';
+        import { hashPassphrase } from './js/crypto.js';
+        import { fetchIncidents, decryptIncident, downloadFile, downloadSummary } from './js/vault.js';
+        import { generateAISummary } from './js/summary.js';
+
+        const incidentList = document.getElementById('incidentList');
+        const loading = document.getElementById('loading');
+        const empty = document.getElementById('empty');
+        const vaultModal = document.getElementById('vaultModal');
+        const summaryModal = document.getElementById('summaryModal');
+        const summaryText = document.getElementById('summaryText');
+        const fileCountBadge = document.getElementById('fileCountBadge');
+        const btnCloseSummary = document.getElementById('btnCloseSummary');
+        const btnCancelSummary = document.getElementById('btnCancelSummary');
+        const btnConfirmDownload = document.getElementById('btnConfirmDownload');
+        const passphraseUnlock = document.getElementById('passphraseUnlock');
+        const btnUnlock = document.getElementById('btnUnlock');
+        const btnLogout = document.getElementById('btnLogout');
+
+        let pendingDownloadIncident = null;
+        let currentSummary = null;
+
+        async function init() {
+            const session = await checkAuth();
+            if (!session) return;
+
+            const userId = session.user.id;
+            if (!sessionStorage.getItem('vault_key')) {
+                const hasVault = localStorage.getItem(`vault_hash_${userId}`);
+                if (!hasVault) {
+                    // Redirect to home to setup vault if not exists
+                    window.location.href = '/home.html';
+                    return;
+                }
+                vaultModal.classList.add('active');
+            } else {
+                loadVault();
+            }
+        }
+
+        btnUnlock.onclick = async () => {
+            try {
+                const session = await auth.getSession();
+                if (!session) throw new Error('Session not found');
+                const userId = session.user.id;
+                
+                const p = passphraseUnlock.value;
+                if (!p) return alert('Please enter your passphrase');
+                
+                btnUnlock.disabled = true;
+                btnUnlock.textContent = 'Unlocking...';
+                
+                const hash = await hashPassphrase(p);
+                const storedHash = localStorage.getItem(`vault_hash_${userId}`);
+                
+                if (hash === storedHash) {
+                    sessionStorage.setItem('vault_key', p);
+                    vaultModal.classList.remove('active');
+                    loadVault();
+                } else {
+                    alert('Incorrect passphrase');
+                }
+            } catch (error) {
+                console.error('Unlock error:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                btnUnlock.disabled = false;
+                btnUnlock.textContent = 'Unlock';
+            }
+        };
+
+        async function loadVault() {
+            loading.classList.remove('hidden');
+            incidentList.innerHTML = '';
+            
+            try {
+                const session = await auth.getSession();
+                const incidents = await fetchIncidents();
+                const passphrase = sessionStorage.getItem('vault_key');
+                const userId = session.user.id;
+
+                if (incidents.length === 0) {
+                    empty.classList.remove('hidden');
+                    loading.classList.add('hidden');
+                    return;
+                }
+
+                const decrypted = await Promise.all(
+                    incidents.map(inc => decryptIncident(inc, passphrase, userId))
+                );
+
+                renderIncidents(decrypted);
+            } catch (error) {
+                alert('Failed to load vault: ' + error.message);
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function renderIncidents(incidents) {
+            incidentList.innerHTML = '';
+            incidents.forEach(inc => {
+                const card = document.createElement('div');
+                card.className = 'glass-card p-6 flex flex-col hover:border-rose-500/30 transition-colors';
+                
+                if (inc.decryptionError) {
+                    card.innerHTML = `
+                        <div class="text-rose-500 font-bold mb-2">⚠️ Decryption Error</div>
+                        <p class="text-xs text-zinc-500">Data was encrypted with a different key.</p>
+                    `;
+                } else {
+                    const dateStr = new Date(inc.date).toLocaleString();
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Incident</span>
+                            <span class="text-[10px] text-zinc-700">${new Date(inc.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <h3 class="font-bold text-lg mb-1">${dateStr}</h3>
+                        <p class="text-xs text-rose-500 font-bold mb-4">📍 ${inc.decrypted.location || 'Unknown'}</p>
+                        <p class="text-sm text-zinc-400 line-clamp-3 mb-6 flex-grow">${inc.decrypted.description}</p>
+                        
+                        <div class="pt-4 border-t border-zinc-900">
+                            ${inc.file_path ? `
+                                <button class="btn-download btn-primary w-full text-xs py-2" data-id="${inc.id}">
+                                    Download Evidence & Summary
+                                </button>
+                            ` : '<p class="text-xs text-zinc-600 italic text-center">No evidence attached</p>'}
+                        </div>
+                    `;
+
+                    const downloadBtn = card.querySelector('.btn-download');
+                    if (downloadBtn) {
+                        downloadBtn.onclick = () => {
+                            currentSummary = generateAISummary(inc);
+                            summaryText.textContent = currentSummary.content;
+                            fileCountBadge.textContent = `${currentSummary.fileCount} Evidence File(s) Attached`;
+                            pendingDownloadIncident = inc;
+                            summaryModal.classList.add('active');
+                        };
+                    }
+                }
+                incidentList.appendChild(card);
+            });
+        }
+
+        btnConfirmDownload.onclick = async () => {
+            if (!pendingDownloadIncident || !currentSummary) return;
+            
+            const btn = btnConfirmDownload;
+            btn.disabled = true;
+            btn.textContent = 'Decrypting & Downloading...';
+            
+            try {
+                // Download summary report
+                downloadSummary(currentSummary.fullReport, pendingDownloadIncident.date);
+                
+                // Download all evidence files
+                await downloadFile(pendingDownloadIncident);
+                
+                summaryModal.classList.remove('active');
+            } catch (e) {
+                alert('Download failed: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Download Evidence & Report';
+            }
+        };
+
+        const closeSummary = () => {
+            summaryModal.classList.remove('active');
+            pendingDownloadIncident = null;
+            currentSummary = null;
+        };
+
+        btnCloseSummary.onclick = closeSummary;
+        btnCancelSummary.onclick = closeSummary;
+
+        btnLogout.onclick = () => auth.signOut();
+
+        init();
+    </script>
+</body>
+</html>
