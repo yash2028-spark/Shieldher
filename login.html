@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | ShieldHer</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="flex items-center justify-center p-4">
+    <div class="glass-card w-full max-w-md p-8">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-rose-600 mb-2">ShieldHer</h1>
+            <p class="text-zinc-400">Secure Zero-Knowledge Evidence Vault</p>
+        </div>
+
+        <div id="loginForm">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-zinc-400 mb-1">Email Address</label>
+                    <input type="email" id="email" class="input-field" placeholder="name@example.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-zinc-400 mb-1">Password</label>
+                    <input type="password" id="password" class="input-field" placeholder="••••••••">
+                </div>
+                <button id="btnSignIn" class="btn-primary w-full">Sign In</button>
+                
+                <div class="relative my-6">
+                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-zinc-800"></div></div>
+                    <div class="relative flex justify-center text-xs uppercase"><span class="bg-zinc-900 px-2 text-zinc-500">Or continue with</span></div>
+                </div>
+
+                <button id="btnGoogle" class="btn-secondary w-full flex items-center justify-center gap-2">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/pjax/google.png" width="18" alt="Google">
+                    Google
+                </button>
+            </div>
+
+            <p class="mt-8 text-center text-sm text-zinc-500">
+                Don't have an account? 
+                <a href="#" id="toggleAuth" class="text-rose-500 hover:underline">Sign Up</a>
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth, checkAuth } from './js/auth.js';
+
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const btnSignIn = document.getElementById('btnSignIn');
+        const btnGoogle = document.getElementById('btnGoogle');
+        const toggleAuth = document.getElementById('toggleAuth');
+        const loginTitle = document.querySelector('h1 + p');
+
+        let isSignUp = false;
+
+        async function init() {
+            await checkAuth();
+        }
+
+        toggleAuth.onclick = (e) => {
+            e.preventDefault();
+            isSignUp = !isSignUp;
+            btnSignIn.textContent = isSignUp ? 'Create Account' : 'Sign In';
+            toggleAuth.textContent = isSignUp ? 'Sign In' : 'Sign Up';
+            loginTitle.textContent = isSignUp ? 'Create your secure vault' : 'Secure Zero-Knowledge Evidence Vault';
+        };
+
+        btnSignIn.onclick = async () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            
+            if (!email || !password) return alert('Please fill all fields');
+            
+            btnSignIn.disabled = true;
+            btnSignIn.textContent = 'Processing...';
+            
+            try {
+                if (isSignUp) {
+                    await auth.signUp(email, password);
+                    alert('Registration successful! Please check your email for verification.');
+                } else {
+                    await auth.signIn(email, password);
+                    window.location.href = '/Home.html';
+                }
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                btnSignIn.disabled = false;
+                btnSignIn.textContent = isSignUp ? 'Create Account' : 'Sign In';
+            }
+        };
+
+        btnGoogle.onclick = async () => {
+            try {
+                await auth.signInWithGoogle();
+            } catch (error) {
+                alert(error.message);
+            }
+        };
+
+        init();
+    </script>
+</body>
+</html>
