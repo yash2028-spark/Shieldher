@@ -3,114 +3,293 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | ShieldHer</title>
-    <link rel="stylesheet" href="/css/style.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .glass-card {
-            background: rgba(17, 17, 17, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1.5rem;
-        }
-        .gradient-text {
-            background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .action-card:hover {
-            transform: translateY(-5px);
-            border-color: rgba(244, 63, 94, 0.5);
-            box-shadow: 0 10px 30px -10px rgba(244, 63, 94, 0.3);
-        }
-    </style>
+    <title>Dashboard - ShieldHer</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-[#050505] text-white min-h-screen pb-20">
-    <nav class="border-b border-zinc-900 p-4 sticky top-0 bg-black/80 backdrop-blur-md z-50">
-        <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold gradient-text">ShieldHer</h1>
-            <div class="flex gap-6 items-center">
-                <a href="/dashboard.html" class="nav-link active">Dashboard</a>
-                <a href="/home.html" class="nav-link">Report</a>
-                <a href="/vault.html" class="nav-link">Vault</a>
-                <button id="btnLogout" class="text-xs text-zinc-500 hover:text-white uppercase tracking-widest font-bold">Logout</button>
-            </div>
-        </div>
-    </nav>
+<body>
+    <div class="overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
 
-    <main class="max-w-6xl mx-auto p-4 mt-10">
-        <!-- Profile & Stats Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-            <div class="lg:col-span-2 glass-card p-8 flex flex-col md:flex-row items-center gap-8">
-                <div class="relative">
-                    <img id="userAvatar" src="https://picsum.photos/seed/user/200" alt="Profile" class="w-32 h-32 rounded-full border-4 border-rose-500/20 object-cover">
-                    <div class="absolute bottom-0 right-0 w-8 h-8 bg-emerald-500 border-4 border-[#111] rounded-full"></div>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <i data-lucide="shield-check"></i>
+                ShieldHer
+            </div>
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="#" class="active" id="navSubmit"><i data-lucide="plus-circle"></i> Submit Incident</a></li>
+                    <li><a href="#" id="navHistory"><i data-lucide="lock"></i> Vault History</a></li>
+                </ul>
+            </nav>
+            <div style="margin-top: auto;">
+                <a href="#" id="logoutBtn" class="nav-links logout-link"><i data-lucide="log-out"></i> Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1 id="pageTitle">Submit New Incident</h1>
+                    <p id="pageSubtitle" style="color: var(--text-muted);">Securely report an incident to your vault.</p>
                 </div>
-                <div class="text-center md:text-left">
-                    <h2 id="userName" class="text-3xl font-bold mb-1 italic serif">Welcome back</h2>
-                    <p id="userEmail" class="text-zinc-500 mb-4 font-mono text-sm">loading...</p>
-                    <div class="flex flex-wrap gap-3 justify-center md:justify-start">
-                        <span class="px-3 py-1 bg-rose-500/10 text-rose-500 rounded-full text-xs font-bold uppercase tracking-wider border border-rose-500/20">Verified Account</span>
-                        <span class="px-3 py-1 bg-zinc-800 text-zinc-400 rounded-full text-xs font-bold uppercase tracking-wider border border-zinc-700">Zero-Knowledge Active</span>
+                <div class="user-profile">
+                    <span id="userEmail" style="font-weight: 500;"></span>
+                    <div id="userInitial" class="user-avatar"></div>
+                </div>
+            </header>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Incidents</h3>
+                    <div class="value" id="totalIncidents">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Security Status</h3>
+                    <div class="status-badge">
+                        <i data-lucide="shield" style="width: 14px;"></i>
+                        AES-256 Encrypted
                     </div>
                 </div>
+                <div class="stat-card">
+                    <h3>Last Activity</h3>
+                    <div class="value" id="lastActivity" style="font-size: 1rem;">No recent activity</div>
+                </div>
             </div>
 
-            <div class="glass-card p-8 flex flex-col justify-center items-center text-center">
-                <p class="text-zinc-500 text-xs uppercase tracking-widest font-bold mb-2">Total Incidents</p>
-                <h3 id="totalIncidents" class="text-6xl font-black gradient-text">0</h3>
-                <p class="text-zinc-600 text-[10px] mt-4 uppercase tracking-widest">Secured in your private vault</p>
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-[0.2em] mb-6">Quick Actions</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <a href="/home.html" class="action-card glass-card p-6 transition-all duration-300 group">
-                <div class="w-12 h-12 bg-rose-500/10 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-rose-500/20 transition-colors">
-                    <span class="text-2xl">📝</span>
-                </div>
-                <h4 class="text-lg font-bold mb-1">Report Incident</h4>
-                <p class="text-zinc-500 text-sm">Document new evidence with client-side encryption.</p>
-            </a>
-            <a href="/vault.html" class="action-card glass-card p-6 transition-all duration-300 group">
-                <div class="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-500/20 transition-colors">
-                    <span class="text-2xl">🔒</span>
-                </div>
-                <h4 class="text-lg font-bold mb-1">Open Vault</h4>
-                <p class="text-zinc-500 text-sm">Access your secure storage and decrypt evidence.</p>
-            </a>
-            <a href="/vault.html" class="action-card glass-card p-6 transition-all duration-300 group">
-                <div class="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-500/20 transition-colors">
-                    <span class="text-2xl">📊</span>
-                </div>
-                <h4 class="text-lg font-bold mb-1">View History</h4>
-                <p class="text-zinc-500 text-sm">Review timeline of all reported incidents and proofs.</p>
-            </a>
-        </div>
-
-        <!-- Recent Activity -->
-        <div class="grid grid-cols-1 gap-8">
-            <div class="glass-card p-8">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-xl font-bold">Recent Incidents</h3>
-                    <a href="/vault.html" class="text-xs text-rose-500 font-bold uppercase tracking-widest hover:underline">View All</a>
-                </div>
-                <div id="recentIncidents" class="space-y-4">
-                    <div class="animate-pulse flex space-x-4">
-                        <div class="flex-1 space-y-4 py-1">
-                            <div class="h-4 bg-zinc-800 rounded w-3/4"></div>
-                            <div class="space-y-2">
-                                <div class="h-4 bg-zinc-800 rounded"></div>
-                                <div class="h-4 bg-zinc-800 rounded w-5/6"></div>
-                            </div>
+            <!-- Submit Section -->
+            <section id="submitSection" class="animate-fade">
+                <div class="card">
+                    <h2>Incident Details</h2>
+                    <form id="incidentForm">
+                        <div class="form-group">
+                            <label for="description">Description (Required)</label>
+                            <textarea id="description" required placeholder="Describe what happened..."></textarea>
                         </div>
+                        <div class="form-group">
+                            <label for="location">Location</label>
+                            <input type="text" id="location" placeholder="Where did it happen?">
+                        </div>
+                        <div class="form-group">
+                            <label for="date">Date & Time</label>
+                            <input type="datetime-local" id="date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="files">Evidence Files (Photos, Videos, Audio, Documents)</label>
+                            <input type="file" id="files" multiple>
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Files will be encrypted before upload.</p>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Securely Save to Vault</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- History Section -->
+            <section id="historySection" class="animate-fade" style="display: none;">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h2>Vault History</h2>
+                        <button class="btn btn-outline btn-sm" id="refreshBtn"><i data-lucide="refresh-cw" style="width: 14px;"></i> Refresh</button>
+                    </div>
+                    <div id="incidentList" class="incident-list">
+                        <!-- Incidents will be loaded here -->
+                        <p style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading your secure vault...</p>
                     </div>
                 </div>
-            </div>
-        </div>
-    </main>
+            </section>
+        </main>
+    </div>
 
-    <script type="module" src="/js/dashboard.js"></script>
+    <script type="module">
+        import { getSession, signOut, checkAuth } from './js/auth.js';
+        import { submitIncident } from './js/incident.js';
+        import { fetchIncidents, downloadFile, generateReport } from './js/vault.js';
+
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const vaultKeyBase64 = sessionStorage.getItem('vault_key');
+        
+        if (!vaultKeyBase64) {
+            alert("Secure session expired. Please login again.");
+            window.location.href = 'login.html';
+        }
+
+        // Import key from session storage
+        const vaultKey = await crypto.subtle.importKey(
+            "raw",
+            new Uint8Array(atob(vaultKeyBase64).split('').map(c => c.charCodeAt(0))),
+            "AES-GCM",
+            true,
+            ["encrypt", "decrypt"]
+        );
+
+        // UI Elements
+        const navSubmit = document.getElementById('navSubmit');
+        const navHistory = document.getElementById('navHistory');
+        const submitSection = document.getElementById('submitSection');
+        const historySection = document.getElementById('historySection');
+        const pageTitle = document.getElementById('pageTitle');
+        const pageSubtitle = document.getElementById('pageSubtitle');
+        const incidentForm = document.getElementById('incidentForm');
+        const incidentList = document.getElementById('incidentList');
+        const userEmail = document.getElementById('userEmail');
+        const userInitial = document.getElementById('userInitial');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const totalIncidents = document.getElementById('totalIncidents');
+        const lastActivity = document.getElementById('lastActivity');
+        const refreshBtn = document.getElementById('refreshBtn');
+
+        // Check Auth
+        checkAuth();
+        const session = await getSession();
+        if (session) {
+            userEmail.innerText = session.user.email;
+            userInitial.innerText = session.user.email[0].toUpperCase();
+        }
+
+        // Navigation
+        navSubmit.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection('submit');
+        });
+
+        navHistory.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection('history');
+            loadIncidents();
+        });
+
+        function showSection(section) {
+            if (section === 'submit') {
+                submitSection.style.display = 'block';
+                historySection.style.display = 'none';
+                navSubmit.classList.add('active');
+                navHistory.classList.remove('active');
+                pageTitle.innerText = 'Submit New Incident';
+                pageSubtitle.innerText = 'Securely report an incident to your vault.';
+            } else {
+                submitSection.style.display = 'none';
+                historySection.style.display = 'block';
+                navSubmit.classList.remove('active');
+                navHistory.classList.add('active');
+                pageTitle.innerText = 'Vault History';
+                pageSubtitle.innerText = 'Access and manage your encrypted records.';
+            }
+        }
+
+        // Form Submission
+        incidentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const description = document.getElementById('description').value;
+            const location = document.getElementById('location').value;
+            const date = document.getElementById('date').value;
+            const files = document.getElementById('files').files;
+
+            loadingOverlay.style.display = 'flex';
+
+            try {
+                await submitIncident(description, location, date, files, vaultKey);
+                alert("Incident securely saved to your vault.");
+                incidentForm.reset();
+                showSection('history');
+                loadIncidents();
+            } catch (err) {
+                console.error(err);
+                alert("Error saving incident: " + err.message);
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        });
+
+        // Load Incidents
+        async function loadIncidents() {
+            incidentList.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">Decrypting your vault...</p>';
+            try {
+                const incidents = await fetchIncidents(vaultKey);
+                totalIncidents.innerText = incidents.length;
+                
+                if (incidents.length > 0) {
+                    lastActivity.innerText = new Date(incidents[0].created_at).toLocaleDateString();
+                    incidentList.innerHTML = '';
+                    incidents.forEach(incident => {
+                        const item = document.createElement('div');
+                        item.className = 'incident-item animate-fade';
+                        item.innerHTML = `
+                            <div class="incident-header">
+                                <span class="incident-location"><i data-lucide="map-pin" style="width: 14px; display: inline; vertical-align: middle;"></i> ${incident.location || 'Unknown Location'}</span>
+                                <span class="incident-date">${new Date(incident.date).toLocaleString()}</span>
+                            </div>
+                            <p class="incident-desc">${incident.description}</p>
+                            <div class="incident-footer">
+                                <span class="file-count"><i data-lucide="paperclip" style="width: 14px;"></i> ${incident.filePaths.length} files</span>
+                                <div class="action-btns">
+                                    <button class="btn btn-outline btn-sm download-report" data-id="${incident.id}">Report</button>
+                                    ${incident.filePaths.length > 0 ? `<button class="btn btn-primary btn-sm view-files" data-id="${incident.id}">Files</button>` : ''}
+                                </div>
+                            </div>
+                            <div class="file-list" id="files-${incident.id}" style="display: none;">
+                                ${incident.filePaths.map((path, idx) => `
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.875rem;">
+                                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">${path.split('_').slice(1).join('_').replace('.enc', '')}</span>
+                                        <button class="btn btn-outline btn-sm download-file" data-path="${path}" data-hash="${incident.fileHashes[idx]}">Download</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                        incidentList.appendChild(item);
+                        
+                        // Add listeners
+                        item.querySelector('.download-report').onclick = () => generateReport(incident);
+                        if (incident.filePaths.length > 0) {
+                            item.querySelector('.view-files').onclick = () => {
+                                const fileList = document.getElementById(`files-${incident.id}`);
+                                fileList.style.display = fileList.style.display === 'none' ? 'block' : 'none';
+                            };
+                        }
+                    });
+                    
+                    // Add download listeners
+                    document.querySelectorAll('.download-file').forEach(btn => {
+                        btn.onclick = async (e) => {
+                            const path = e.target.dataset.path;
+                            const hash = e.target.dataset.hash;
+                            loadingOverlay.style.display = 'flex';
+                            try {
+                                await downloadFile(path, hash, vaultKey);
+                            } catch (err) {
+                                alert(err.message);
+                            } finally {
+                                loadingOverlay.style.display = 'none';
+                            }
+                        };
+                    });
+                    
+                    lucide.createIcons();
+                } else {
+                    incidentList.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">No incidents found in your vault.</p>';
+                }
+            } catch (err) {
+                console.error(err);
+                incidentList.innerHTML = `<p style="text-align: center; color: var(--danger); padding: 2rem;">Error loading vault: ${err.message}</p>`;
+            }
+        }
+
+        refreshBtn.onclick = loadIncidents;
+        logoutBtn.onclick = async (e) => {
+            e.preventDefault();
+            await signOut();
+        };
+
+        // Initial load
+        loadIncidents();
+    </script>
 </body>
 </html>

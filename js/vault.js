@@ -1,104 +1,87 @@
 import { supabase } from './supabase.js';
-import { auth } from './auth.js';
-import { decrypt } from './crypto.js';
+import { decrypt, decryptBuffer, generateHash } from './crypto.js';
 
-/**
- * Vault history logic
- */
-
-export async function fetchIncidents() {
+export async function fetchIncidents(vaultKey) {
     const { data, error } = await supabase
-        .from("incidents")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .from('incidents')
+        .select('*')
+        .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data;
-}
 
-export async function decryptIncident(incident, passphrase, userId) {
-    try {
-        const description = await decrypt(incident.description, passphrase, userId, true);
-        const location = await decrypt(incident.location, passphrase, userId, true);
-        
-        return {
-            ...incident,
-            decrypted: {
+    const decryptedIncidents = await Promise.all(data.map(async (incident) => {
+        try {
+            const description = await decrypt(incident.description, vaultKey);
+            const location = await decrypt(incident.location, vaultKey);
+            return {
+                ...incident,
                 description,
-                location
-            }
-        };
-    } catch (e) {
-        console.error("Decryption failed for incident", incident.id, e);
-        return { ...incident, decryptionError: true };
-    }
+                location,
+                filePaths: JSON.parse(incident.file_path || '[]'),
+                fileHashes: JSON.parse(incident.file_hash || '[]')
+            };
+        } catch (e) {
+            console.error("Decryption failed for incident", incident.id, e);
+            return {
+                ...incident,
+                description: "[Decryption Failed]",
+                location: "[Decryption Failed]",
+                decryptionError: true
+            };
+        }
+    }));
+
+    return decryptedIncidents;
 }
 
-export async function downloadFile(incident) {
-    const session = await auth.getSession();
-    const passphrase = sessionStorage.getItem('vault_key');
-    const userId = session.user.id;
+export async function downloadFile(filePath, expectedHash, vaultKey) {
+    const { data, error } = await supabase.storage
+        .from('evidence')
+        .download(filePath);
 
-    let filePaths = [];
-    try {
-        filePaths = JSON.parse(incident.file_path);
-        if (!Array.isArray(filePaths)) filePaths = [incident.file_path];
-    } catch (e) {
-        filePaths = [incident.file_path];
+    if (error) throw error;
+
+    const encryptedBuffer = await data.arrayBuffer();
+    const decryptedBuffer = await decryptBuffer(new Uint8Array(encryptedBuffer), vaultKey);
+    
+    const actualHash = await generateHash(decryptedBuffer);
+    
+    if (actualHash !== expectedHash) {
+        throw new Error("Integrity check failed! File may have been tampered with.");
     }
 
-    for (const path of filePaths) {
-        const { data, error } = await supabase.storage
-            .from('evidence')
-            .download(path);
-
-        if (error) {
-            console.error("Download failed for", path, error);
-            continue;
-        }
-
-        const buffer = await data.arrayBuffer();
-        
-        // Convert arrayBuffer to base64 safely
-        let binary = '';
-        const bytes = new Uint8Array(buffer);
-        for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        const base64 = btoa(binary);
-        
-        const decryptedBuffer = await decrypt(base64, passphrase, userId);
-        
-        const blob = new Blob([decryptedBuffer]);
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        
-        // Extract original name
-        const parts = path.split('_');
-        const originalName = parts.length > 2 
-            ? parts.slice(2).join('_').replace('.enc', '')
-            : parts.slice(1).join('_').replace('.enc', '');
-        
-        a.href = url;
-        a.download = originalName;
-        document.body.appendChild(a);
-        a.click();
-        URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        // Small delay between downloads to avoid browser blocking
-        await new Promise(r => setTimeout(r, 500));
-    }
-}
-
-export function downloadSummary(reportText, date) {
-    const blob = new Blob([reportText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
+    const blob = new Blob([decryptedBuffer]);
+    const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ShieldHer_Report_${new Date(date).getTime()}.txt`;
+    a.download = filePath.split('/').pop().replace('.enc', '');
     document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+export function generateReport(incident) {
+    const content = `
+ShieldHer Incident Report
+-------------------------
+ID: ${incident.id}
+Date: ${new Date(incident.date).toLocaleString()}
+Created At: ${new Date(incident.created_at).toLocaleString()}
+
+Location: ${incident.location}
+Description:
+${incident.description}
+
+Files: ${incident.filePaths.length}
+-------------------------
+Generated on: ${new Date().toLocaleString()}
+`;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ShieldHer_Report_${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
 }

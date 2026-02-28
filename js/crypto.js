@@ -1,4 +1,5 @@
 /**
+<<<<<<< HEAD
  * Crypto utilities for ShieldHer
  */
 
@@ -20,97 +21,100 @@ export async function hashPassphrase(passphrase) {
 async function deriveKey(passphrase, userId) {
     const encoder = new TextEncoder();
     const passphraseBytes = encoder.encode(passphrase);
-    const salt = encoder.encode(`shieldher-${userId}`);
+=======
+ * Crypto utility for ShieldHer
+ * Implements PBKDF2, AES-GCM, and SHA-256
+ */
 
+export async function deriveKey(passphrase, userId) {
+    const encoder = new TextEncoder();
+>>>>>>> c5231dceeb0d9cfbf8638c21e4710441a917b1b8
+    const salt = encoder.encode(`shieldher-${userId}`);
     const baseKey = await crypto.subtle.importKey(
-        'raw',
-        passphraseBytes,
-        'PBKDF2',
+        "raw",
+        encoder.encode(passphrase),
+        "PBKDF2",
         false,
-        ['deriveKey']
+        ["deriveKey"]
     );
 
     return crypto.subtle.deriveKey(
         {
-            name: 'PBKDF2',
+            name: "PBKDF2",
             salt: salt,
-            iterations: ITERATIONS,
-            hash: 'SHA-256'
+            iterations: 100000,
+            hash: "SHA-256"
         },
         baseKey,
-        { name: ALGORITHM, length: KEY_LENGTH },
-        false,
-        ['encrypt', 'decrypt']
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt", "decrypt"]
     );
 }
 
-/**
- * Helper to convert Uint8Array to Base64 safely
- */
-function uint8ArrayToBase64(bytes) {
-    let binary = '';
-    const len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
-        binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
-}
-
-/**
- * Helper to convert Base64 to Uint8Array safely
- */
-function base64ToUint8Array(base64) {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes;
-}
-
-export async function encrypt(data, passphrase, userId) {
-    const key = await deriveKey(passphrase, userId);
-    const iv = crypto.getRandomValues(new Uint8Array(12));
+export async function encrypt(data, key) {
     const encoder = new TextEncoder();
-    const dataToEncrypt = typeof data === 'string' ? encoder.encode(data) : data;
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encodedData = typeof data === 'string' ? encoder.encode(data) : data;
 
-    const encryptedData = await crypto.subtle.encrypt(
-        { name: ALGORITHM, iv: iv },
+    const encryptedContent = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv: iv },
         key,
-        dataToEncrypt
+        encodedData
     );
 
-    const combined = new Uint8Array(iv.length + encryptedData.byteLength);
+    // Combine IV + Encrypted Data
+    const combined = new Uint8Array(iv.length + encryptedContent.byteLength);
     combined.set(iv);
-    combined.set(new Uint8Array(encryptedData), iv.length);
-    
-    return uint8ArrayToBase64(combined);
+    combined.set(new Uint8Array(encryptedContent), iv.length);
+
+    // For small data (strings), return base64
+    if (typeof data === 'string') {
+        return btoa(String.fromCharCode(...combined));
+    }
+    // For binary data (files), return the Uint8Array directly
+    return combined;
 }
 
-export async function decrypt(base64String, passphrase, userId, isText = false) {
-    const key = await deriveKey(passphrase, userId);
-    const bytes = base64ToUint8Array(base64String);
-    
-    const iv = bytes.slice(0, 12);
-    const encryptedData = bytes.slice(12).buffer;
+export async function decrypt(encryptedData, key) {
+    let combined;
+    if (typeof encryptedData === 'string') {
+        combined = new Uint8Array(
+            atob(encryptedData)
+                .split("")
+                .map((c) => c.charCodeAt(0))
+        );
+    } else {
+        combined = encryptedData;
+    }
 
-    const decryptedData = await crypto.subtle.decrypt(
-        { name: ALGORITHM, iv: iv },
+    const iv = combined.slice(0, 12);
+    const data = combined.slice(12);
+
+    const decryptedContent = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: iv },
         key,
-        encryptedData
+        data
     );
 
-    if (isText) {
-        const decoder = new TextDecoder();
-        return decoder.decode(decryptedData);
-    }
-    return decryptedData;
+    return new TextDecoder().decode(decryptedContent);
 }
 
-export async function generateFileHash(file) {
-    const arrayBuffer = await file.arrayBuffer();
-    const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+export async function decryptBuffer(combined, key) {
+    const iv = combined.slice(0, 12);
+    const data = combined.slice(12);
+
+    const decryptedContent = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: iv },
+        key,
+        data
+    );
+
+    return decryptedContent;
+}
+
+export async function generateHash(data) {
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
