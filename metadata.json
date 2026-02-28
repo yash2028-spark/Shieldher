@@ -1,0 +1,9 @@
+{
+  "name": "ShieldHer",
+  "description": "Advanced zero-knowledge secure evidence vault with Google OAuth, AI summaries, and multi-file encryption.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
