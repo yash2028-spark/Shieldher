@@ -1,10 +1,20 @@
-# Shieldher
-Shieldher is Private incident documentation and evidence preservation platform that helps indivisuals securely record and preserve evidence of harassment or unsafe events.
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-The platfrom allows users to:
--Record incident details(date,time,locatiom,description)
--Attach evidence(images,audio,video,PDF)
--Store records privetely
--Access records later if they decide to take action 
+# Run and deploy your AI Studio app
 
-The goal is to help victims documet early evidence safely before formal reporting.
+This contains everything you need to run your app locally.
+
+View your app in AI Studio: https://ai.studio/apps/750bc2ff-089b-4009-bd6f-d54c178ba61a
+
+## Run Locally
+
+**Prerequisites:**  Node.js
+
+
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`

@@ -1,47 +1,54 @@
 import { supabase } from './supabase.js';
 
-export async function signUp(email, password) {
-    const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-    });
-    return { data, error };
-}
+export const auth = {
+    async signUp(email, password) {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        return data;
+    },
 
-export async function signIn(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-    });
-    return { data, error };
-}
+    async signIn(email, password) {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        return data;
+    },
 
-export async function signInWithGoogle() {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-            redirectTo: window.location.origin + '/dashboard.html'
-        }
-    });
-    return { data, error };
-}
+    async signInWithGoogle() {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin + '/dashboard.html',
+                queryParams: {
+                    prompt: 'select_account'
+                }
+            }
+        });
+        if (error) throw error;
+        return data;
+    },
 
-export async function signOut() {
-    const { error } = await supabase.auth.signOut();
-    sessionStorage.removeItem('vault_key');
-    window.location.href = 'login.html';
-    return { error };
-}
+    async signOut() {
+        const { error } = await supabase.auth.signOut();
+        sessionStorage.removeItem('vault_key');
+        if (error) throw error;
+        window.location.href = '/index.html';
+    },
 
-export async function getSession() {
-    const { data: { session } } = await supabase.auth.getSession();
+    async getSession() {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) return null;
+        return session;
+    }
+};
+
+export async function checkAuth() {
+    const session = await auth.getSession();
+    const isLoginPage = window.location.pathname.includes('index.html') || window.location.pathname === '/';
+    
+    if (!session && !isLoginPage) {
+        window.location.href = '/index.html';
+    } else if (session && isLoginPage) {
+        window.location.href = '/dashboard.html';
+    }
     return session;
-}
-
-export function checkAuth() {
-    supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_OUT' || !session) {
-            window.location.href = 'login.html';
-        }
-    });
 }
