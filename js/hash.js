@@ -1,9 +1,9 @@
 /**
  * Generates a SHA-256 hash of a file
- * @param {File|Blob} file
- * @returns {Promise<strings>} 
+ * @param {File|Blob} file 
+ * @returns {Promise<string>}
  */
-export async function generalFileHash(file) {
+export async function generateFileHash(file) {
     const arrayBuffer = await file.arrayBuffer();
     const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
@@ -13,9 +13,9 @@ export async function generalFileHash(file) {
 
 /**
  * Verifies if the data matches the expected hash
- * @param {ArrayBuffer} data
- * @param {string} expectedHash
- * @param {Promise<boolean}
+ * @param {ArrayBuffer} data 
+ * @param {string} expectedHash 
+ * @returns {Promise<boolean>}
  */
 export async function verifyIntegrity(data, expectedHash) {
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
